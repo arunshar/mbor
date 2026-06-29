@@ -1,0 +1,17 @@
+[package]
+name = "mbor-core"
+description = "Core bi-objective routing: CSR graph, Pareto frontier, lexicographic label-setting search (MBOR, IWCTS'24)"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "core"
+harness = false

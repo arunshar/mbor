@@ -1,0 +1,20 @@
+# Rust
+/rust/target/
+**/*.rs.bk
+Cargo.lock.orig
+
+# Python / Triton
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Data (vendored BAY maps are large; fetch with data/fetch_dimacs_bay.sh)
+/data/maps/
+/data/queries/
+*.gr
+*.co
+
+# OS / editor
+.DS_Store
+*.swp

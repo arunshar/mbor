@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/mbor-core"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+authors = ["Arun Sharma"]
+license = "MIT"
+repository = "https://github.com/arunshar/mbor"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
