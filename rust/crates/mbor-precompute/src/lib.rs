@@ -385,6 +385,56 @@ impl Mepfv {
     pub fn query_adv_costs(&self, o: usize, d: usize) -> Vec<Cost> {
         self.query_adv(o, d).0
     }
+
+    /// Export the boundary-pair segment cost-sets `(A, B, C)` for a query, where
+    /// `A = FPPV(o->oBN)`, `B = BPPV(oBN->dBN)`, `C = FPPV(dBN->d)`. This is the
+    /// batched Minkowski-combine workload the Triton kernels accelerate.
+    pub fn export_pairs(&self, o: usize, d: usize) -> Vec<(Vec<Cost>, Vec<Cost>, Vec<Cost>)> {
+        let fo = self.part[o] as usize;
+        let fd = self.part[d] as usize;
+        let ol = self.frag_g2l[fo][o] as usize;
+        let dl = self.frag_g2l[fd][d] as usize;
+        let mut out = Vec::new();
+        for &obn in &self.frag_boundary[fo] {
+            let a = &self.node2b[fo][&obn][ol];
+            if a.is_empty() {
+                continue;
+            }
+            let si = self.bidx[obn as usize] as usize;
+            for &dbn in &self.frag_boundary[fd] {
+                let c = &self.b2node[fd][&dbn][dl];
+                if c.is_empty() {
+                    continue;
+                }
+                let ti = self.bidx[dbn as usize] as usize;
+                let b = &self.bppv[si][ti];
+                if b.is_empty() {
+                    continue;
+                }
+                out.push((a.clone(), b.clone(), c.clone()));
+            }
+        }
+        out
+    }
+
+    /// Export the largest fragment as `(num_nodes, edges, boundary_source_locals)`
+    /// for the speculative GPU precompute (a self-contained subgraph + the local
+    /// indices of its boundary nodes to run bi-objective search from).
+    pub fn largest_fragment(&self) -> (usize, Vec<(u32, u32, i64, i64)>, Vec<u32>) {
+        let f = (0..self.frag_graph.len())
+            .max_by_key(|&f| self.frag_graph[f].num_nodes())
+            .unwrap_or(0);
+        let g = &self.frag_graph[f];
+        let edges: Vec<(u32, u32, i64, i64)> = g
+            .edges()
+            .map(|(u, v, c)| (u as u32, v as u32, c.c1, c.c2))
+            .collect();
+        let srcs: Vec<u32> = self.frag_boundary[f]
+            .iter()
+            .map(|&b| self.frag_g2l[f][b as usize])
+            .collect();
+        (g.num_nodes(), edges, srcs)
+    }
 }
 
 /// Pruning statistics from `Mepfv::query_adv`.

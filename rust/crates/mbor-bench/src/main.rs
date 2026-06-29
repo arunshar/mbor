@@ -49,6 +49,13 @@ fn main() {
         })
         .collect();
 
+    // Optional: export the batched boundary-pair workload (A,B,C cost-sets) and
+    // the largest fragment for the GPU kernels / precompute, then exit.
+    if let Ok(dir) = std::env::var("MBOR_EXPORT") {
+        export_workload(&mepfv, &queries, &dir);
+        return;
+    }
+
     // Exactness check (once): all four methods must agree on every query.
     let mut mismatches = 0usize;
     let mut sol_total = 0usize;
@@ -121,5 +128,68 @@ fn main() {
         } else {
             0.0
         }
+    );
+}
+
+fn costs_json(out: &mut String, costs: &[mbor_core::graph::Cost]) {
+    out.push('[');
+    for (i, c) in costs.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(&format!("[{},{}]", c.c1, c.c2));
+    }
+    out.push(']');
+}
+
+/// Write `pairs.json` (all boundary-pair A,B,C cost-sets across the queries) and
+/// `frag.json` (the largest fragment's edge list + boundary source locals) for
+/// the GPU kernels and the speculative GPU precompute.
+fn export_workload(mepfv: &Mepfv, queries: &[(usize, usize)], dir: &str) {
+    std::fs::create_dir_all(dir).expect("mkdir export");
+    let mut all = Vec::new();
+    for &(o, d) in queries {
+        all.extend(mepfv.export_pairs(o, d));
+    }
+    let mut s = String::from("[");
+    for (i, (a, b, c)) in all.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push_str("{\"a\":");
+        costs_json(&mut s, a);
+        s.push_str(",\"b\":");
+        costs_json(&mut s, b);
+        s.push_str(",\"c\":");
+        costs_json(&mut s, c);
+        s.push('}');
+    }
+    s.push(']');
+    std::fs::write(format!("{dir}/pairs.json"), s).expect("write pairs");
+
+    let (n, edges, srcs) = mepfv.largest_fragment();
+    let mut fs = format!("{{\"n\":{n},\"edges\":[");
+    for (i, (u, v, c1, c2)) in edges.iter().enumerate() {
+        if i > 0 {
+            fs.push(',');
+        }
+        fs.push_str(&format!("[{u},{v},{c1},{c2}]"));
+    }
+    fs.push_str("],\"sources\":[");
+    for (i, sc) in srcs.iter().enumerate() {
+        if i > 0 {
+            fs.push(',');
+        }
+        fs.push_str(&sc.to_string());
+    }
+    fs.push_str("]}");
+    std::fs::write(format!("{dir}/frag.json"), fs).expect("write frag");
+    eprintln!(
+        "exported {} boundary-pair triples + fragment (n={}, {} edges, {} sources) to {}",
+        all.len(),
+        n,
+        edges.len(),
+        srcs.len(),
+        dir
     );
 }

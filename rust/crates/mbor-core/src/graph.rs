@@ -181,4 +181,9 @@ impl Graph {
         }
         (Graph::from_edges(nodes.len(), edges), g2l)
     }
+
+    /// Iterate all directed edges as `(from, to, cost)`.
+    pub fn edges(&self) -> impl Iterator<Item = (usize, usize, Cost)> + '_ {
+        (0..self.n).flat_map(move |u| self.neighbors(u).map(move |(v, c)| (u, v, c)))
+    }
 }
