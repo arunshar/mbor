@@ -26,6 +26,12 @@ use mbor_core::label_setting::pareto_from;
 use mbor_core::pareto::{insert_nondominated, minkowski_sum, pareto_filter};
 use rayon::prelude::*;
 
+/// A boundary-pair's three segment cost-sets: A = FPPV(o->oBN), B = BPPV(oBN->dBN),
+/// C = FPPV(dBN->d). The batched Minkowski-combine workload for the GPU kernels.
+pub type CostTriple = (Vec<Cost>, Vec<Cost>, Vec<Cost>);
+/// Exported fragment: (num_nodes, edges as (u, v, c1, c2), boundary source locals).
+pub type FragExport = (usize, Vec<(u32, u32, i64, i64)>, Vec<u32>);
+
 /// Contiguous block partition: node `i` goes to fragment `(i * k) / n`.
 /// Deterministic and trivial to reproduce in any language (used as a stand-in
 /// for KaHIP min-cut; MBOR is exact, so the partition does not affect results).
@@ -389,7 +395,7 @@ impl Mepfv {
     /// Export the boundary-pair segment cost-sets `(A, B, C)` for a query, where
     /// `A = FPPV(o->oBN)`, `B = BPPV(oBN->dBN)`, `C = FPPV(dBN->d)`. This is the
     /// batched Minkowski-combine workload the Triton kernels accelerate.
-    pub fn export_pairs(&self, o: usize, d: usize) -> Vec<(Vec<Cost>, Vec<Cost>, Vec<Cost>)> {
+    pub fn export_pairs(&self, o: usize, d: usize) -> Vec<CostTriple> {
         let fo = self.part[o] as usize;
         let fd = self.part[d] as usize;
         let ol = self.frag_g2l[fo][o] as usize;
@@ -420,7 +426,7 @@ impl Mepfv {
     /// Export the largest fragment as `(num_nodes, edges, boundary_source_locals)`
     /// for the speculative GPU precompute (a self-contained subgraph + the local
     /// indices of its boundary nodes to run bi-objective search from).
-    pub fn largest_fragment(&self) -> (usize, Vec<(u32, u32, i64, i64)>, Vec<u32>) {
+    pub fn largest_fragment(&self) -> FragExport {
         let f = (0..self.frag_graph.len())
             .max_by_key(|&f| self.frag_graph[f].num_nodes())
             .unwrap_or(0);
