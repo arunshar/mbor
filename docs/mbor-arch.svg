@@ -1,0 +1,68 @@
+<svg viewBox="0 0 960 330" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="MBOR architecture: MEPFV precomputation and online retrieval">
+  <style>
+    .t{font-family:Montserrat,system-ui,sans-serif;font-size:13px;font-weight:700;fill:#16202c}
+    .s{font-family:'Noto Sans',system-ui,sans-serif;font-size:10.5px;fill:#5b6776}
+    .box{fill:#ffffff;stroke:#d8dee8;stroke-width:1.5;rx:10}
+    .green{fill:#eafaf2;stroke:#0e9f6e}
+    .amber{fill:#fdf3e6;stroke:#b45309}
+    .blue{fill:#eaf0fd;stroke:#2257d6}
+    .lab{font-family:Montserrat;font-size:11px;font-weight:700;fill:#0e9f6e}
+    .laba{font-family:Montserrat;font-size:11px;font-weight:700;fill:#b45309}
+    .ar{stroke:#8893a4;stroke-width:1.7;fill:none;marker-end:url(#a)}
+    .ph{font-family:Montserrat;font-size:11.5px;font-weight:800;fill:#16202c;letter-spacing:.04em}
+  </style>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8893a4"/></marker></defs>
+
+  <text class="ph" x="20" y="22">PRECOMPUTE  (MEPFV)</text>
+  <text class="ph" x="640" y="22">ONLINE  (per query)</text>
+
+  <!-- precompute row -->
+  <rect class="box" x="14"  y="42" width="150" height="58" rx="10"/>
+  <text class="t" x="26" y="64">Road network</text><text class="s" x="26" y="80">G = (N, E, c)</text><text class="s" x="26" y="93">two costs / edge</text>
+
+  <rect class="box" x="190" y="42" width="160" height="58" rx="10"/>
+  <text class="t" x="202" y="64">Partition</text><text class="s" x="202" y="80">fragments (BFS / KaHIP)</text><text class="s" x="202" y="93">-&gt; boundary nodes</text>
+
+  <rect class="box green" x="376" y="42" width="160" height="58" rx="10"/>
+  <text class="t" x="388" y="64">FPPV</text><text class="s" x="388" y="80">node&#8596;boundary Pareto</text><text class="lab" x="388" y="94">reproduced</text>
+
+  <rect class="box green" x="562" y="42" width="170" height="58" rx="10"/>
+  <text class="t" x="574" y="62">Boundary multigraph</text><text class="s" x="574" y="78">local multi-edges +</text><text class="s" x="574" y="91">boundary edges</text>
+
+  <rect class="box green" x="758" y="42" width="188" height="58" rx="10"/>
+  <text class="t" x="770" y="64">BPPV</text><text class="s" x="770" y="80">all-pairs boundary Pareto</text><text class="lab" x="770" y="94">reproduced (exact)</text>
+
+  <path class="ar" d="M164,71 L188,71"/>
+  <path class="ar" d="M350,71 L374,71"/>
+  <path class="ar" d="M536,71 L560,71"/>
+  <path class="ar" d="M732,71 L756,71"/>
+
+  <!-- MEPFV bracket -->
+  <path d="M376,108 L946,108" stroke="#0e9f6e" stroke-width="1.2" stroke-dasharray="4 4" fill="none"/>
+  <text class="lab" x="610" y="124">MEPFV (precomputed once)</text>
+
+  <!-- online row -->
+  <rect class="box" x="14" y="168" width="150" height="58" rx="10"/>
+  <text class="t" x="26" y="190">Query (o, d)</text><text class="s" x="26" y="206">origin, destination</text>
+
+  <rect class="box blue" x="190" y="168" width="200" height="58" rx="10"/>
+  <text class="t" x="202" y="188">MBOR-Basic (Alg 3)</text><text class="s" x="202" y="204">FPPV &#8853; BPPV &#8853; FPPV</text><text class="s" x="202" y="217">Minkowski combine</text>
+
+  <rect class="box blue" x="416" y="168" width="210" height="58" rx="10"/>
+  <text class="t" x="428" y="188">MBOR-Adv (Alg 4)</text><text class="s" x="428" y="204">2D cost-interval pruning</text><text class="s" x="428" y="217">skip dominated pairs</text>
+
+  <rect class="box green" x="652" y="168" width="170" height="58" rx="10"/>
+  <text class="t" x="664" y="190">Pareto frontier</text><text class="s" x="664" y="206">complete &amp; exact</text><text class="lab" x="664" y="219">= BOA* = BOD</text>
+
+  <path class="ar" d="M164,197 L188,197"/>
+  <path class="ar" d="M390,197 L414,197"/>
+  <path class="ar" d="M626,197 L650,197"/>
+  <!-- MEPFV feeds online -->
+  <path class="ar" d="M460,140 L300,166" stroke-dasharray="3 3"/>
+  <path class="ar" d="M620,140 L520,166" stroke-dasharray="3 3"/>
+
+  <!-- footnote -->
+  <text class="laba" x="14" y="262">Honest scope:</text>
+  <text class="s" x="120" y="262">online retrieval reproduces the paper's &gt;10x speedup on open DIMACS Bay Area data; precompute is correct but not yet memory-optimized for full BAY.</text>
+  <text class="s" x="14" y="284">Green = reproduced and exactness-checked against BOA* / bi-objective Dijkstra and an independent full-graph search. Blue = the two online retrieval modes.</text>
+</svg>

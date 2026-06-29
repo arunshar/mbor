@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBOR, explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Noto+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbfcfe;--panel:#f5f8fc;--ink:#16202c;--mut:#42505f;--line:#e1e6ef;--acc:#2257d6;--acc2:#0e9f6e;--warn:#b45309;--code:#0d1117}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--panel:#161b22;--ink:#e7ecf3;--mut:#9aa6b4;--line:#252c37;--acc:#6ea8fe;--acc2:#54d6a0;--warn:#ffb454;--code:#0b0f14}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans",system-ui,sans-serif;line-height:1.65}
+main{max-width:880px;margin:0 auto;padding:40px 22px 80px}
+h1,h2,h3{font-family:Montserrat,sans-serif;letter-spacing:-.01em}
+h1{font-size:34px;margin:0 0 6px}h2{font-size:23px;margin:34px 0 8px;border-bottom:2px solid var(--line);padding-bottom:5px}h3{font-size:17px;margin:20px 0 6px}
+a{color:var(--acc)}.sub{color:var(--mut);font-size:17px;margin:0 0 8px}
+blockquote{border-left:4px solid var(--acc);background:var(--panel);margin:14px 0;padding:10px 16px;border-radius:0 8px 8px 0;color:var(--mut)}
+blockquote.warn{border-left-color:var(--warn)}
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.86em;background:rgba(127,127,127,.13);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);color:#d6deeb;border-radius:10px;padding:14px 16px;overflow:auto;font-size:12.8px;line-height:1.55}
+pre code{background:none;color:#d6deeb;padding:0}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:12px 0}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}th{background:var(--panel);font-family:Montserrat;font-size:13px}
+ul,ol{padding-left:22px}li{margin:5px 0}
+.nav{font-size:14px;color:var(--mut)}.ok{color:var(--acc2);font-weight:700}.scaf{color:var(--warn);font-weight:700}
+</style></head>
+<body><main>
+
+<h1>MBOR, explained</h1>
+<p class="sub">A plain-language tour of Multi-level Bi-objective Routing and how this Rust reimplementation reproduces it. Companion to the <a href="./index.html">project hub</a> and the <a href="https://arunshar.com/projects/mbor-routing/">paper page</a>.</p>
+<p class="nav">Sections: <a href="#model">0 mental model</a> &middot; <a href="#problem">1 the problem</a> &middot; <a href="#how">2 how it works</a> &middot; <a href="#why">3 design decisions</a> &middot; <a href="#code">4 the code</a> &middot; <a href="#read">5 reading the numbers</a> &middot; <a href="#scope">6 honest scope</a> &middot; <a href="#next">7 what is next</a></p>
+
+<h2 id="model">0. The one mental model</h2>
+<blockquote>Precompute the hard part between region boundaries once. Then any trip is "get to the edge of your region, cross a tiny graph of region-borders, arrive from the edge of the destination region", and you only ever combine a handful of precomputed Pareto sets.</blockquote>
+<p>That is the whole idea. Everything below is how you make that exact and fast when each road has <i>two</i> costs and there can be many equally-good answers.</p>
+
+<h2 id="problem">1. The problem: bi-objective routing</h2>
+<p>Each edge carries two non-negative costs, say travel time and energy. A path's cost is the pair-wise sum. Path <code>p</code> <b>dominates</b> <code>p'</code> if it is no worse on both costs and strictly better on at least one. The answer to a query is the <b>Pareto frontier</b>: every path that nobody dominates. There is no single "shortest" path, there is a trade-off curve, and a driver picks a point on it (eco vs fast).</p>
+<p>This is hard: the number of Pareto-optimal paths can grow exponentially, so the classic compute-on-demand searches (bi-objective Dijkstra, NAMOA*dr, BOA*) get slow on city-scale graphs. The paper's toy (Figure 1) has frontier <code>n0 -&gt; n7 = {(10,17), (11,16)}</code>: two incomparable routes, one a little faster, one a little lighter.</p>
+
+<h2 id="how">2. How MBOR works</h2>
+<p>MBOR trades precomputation for query speed using three ideas.</p>
+<h3>Partition into fragments and find the boundary nodes</h3>
+<p>Cut the map into <code>k</code> fragments. A <b>boundary node</b> is any node with an edge crossing into another fragment. Every cross-region trip must pass through boundary nodes, so they are the "border crossings" of the map.</p>
+<h3>FPPV: fragment Pareto path views</h3>
+<p>Inside each fragment, precompute the Pareto frontier from every node to each of its boundary nodes, and from each boundary node to every node. That is the "get to the edge / arrive from the edge" part, computed once per fragment with the label-setting search restricted to that fragment.</p>
+<h3>Boundary multigraph + BPPV</h3>
+<p>Build a small graph over only the boundary nodes. Between two boundary nodes in the same fragment there can be several incomparable within-fragment routes, so the edge is a <b>multi-edge</b> carrying a whole Pareto cost-set; cross-fragment original edges are added too. The <b>BPPV</b> is the Pareto frontier between boundary-node pairs over this multigraph. Together, FPPV + BPPV form the <b>MEPFV</b> (the Multi-level Encoded Pareto Frontier View).</p>
+<h3>Online retrieval</h3>
+<p><b>MBOR-Basic (Alg 3):</b> for a query <code>(o, d)</code>, combine, over boundary-node pairs <code>(oBN, dBN)</code>, the three precomputed Pareto sets <code>FPPV(o&rarr;oBN) &#8853; BPPV(oBN&rarr;dBN) &#8853; FPPV(dBN&rarr;d)</code> with the Minkowski sum (pairwise add, keep non-dominated), plus any path that stays inside one fragment.</p>
+<p><b>MBOR-Adv (Alg 4):</b> the combination above is the bottleneck because many boundary-node pairs cannot possibly contribute. Each pair's best conceivable result is its ideal corner <code>(min total c1, min total c2)</code>. If that corner is already dominated by the frontier found so far, every path through that pair is dominated too, so its Minkowski sum is skipped. Processing pairs in ideal-corner order makes the frontier tighten early and prune the rest. This is the paper's <b>two-dimensional cost-interval pruning</b>, and it returns the identical exact frontier as Basic.</p>
+
+<h2 id="why">3. Design decisions (what, why, alternative)</h2>
+<table>
+<thead><tr><th>Decision</th><th>Why</th><th>Alternative cost</th></tr></thead>
+<tbody>
+<tr><td>Precompute MEPFV between boundaries</td><td>Turns a city-scale search into combining a few small Pareto sets</td><td>Pure compute-on-demand (BOA*/NAMOA*dr) is exact but slow at scale</td></tr>
+<tr><td>Multi-edges in the boundary graph</td><td>Two boundary nodes can have several incomparable connecting routes; a single edge would lose Pareto options</td><td>An ordinary boundary graph drops valid trade-offs (wrong answer)</td></tr>
+<tr><td>2D cost-interval pruning (Adv)</td><td>Skips boundary-pair combinations whose best case is already beaten; the Minkowski sum is the expensive step</td><td>Basic does every combination; correct but slower</td></tr>
+<tr><td>Lexicographic label-setting with a <code>g2_min</code> bound</td><td>Pops labels in (c1, c2) order so the first settle of a node is Pareto-optimal; the goal bound is BOA*'s dimensionality reduction</td><td>Plain Martins labelling explores more</td></tr>
+</tbody>
+</table>
+
+<h2 id="code">4. The code (Rust workspace)</h2>
+<ul>
+<li><code>mbor-core</code>: CSR graph + DIMACS loader, the bi-objective label-setting search (Alg 2 / BOA* family), Pareto dominance, Minkowski sum, and a one-to-all variant used to build the FPPV.</li>
+<li><code>mbor-precompute</code>: partition (BFS region-growing, or load a KaHIP file), boundary detection, FPPV via forward and reverse label-setting on induced fragment subgraphs, the boundary multigraph, BPPV via multigraph label-setting, and the online <code>query</code> (Basic) and <code>query_adv</code> (Adv, with pruning stats).</li>
+<li><code>mbor-baseline</code>: exact BOA* and bi-objective Dijkstra (BOD) for the speedup comparison.</li>
+<li><code>mbor-bench</code>: times all four methods on the BAY subnetworks, verifies they agree, and reports the speedups and pruning rate.</li>
+</ul>
+<p>Correctness is enforced by tests: <code>query</code> and <code>query_adv</code> are checked against the exact full-graph search and both baselines for every node pair on the paper toy and on synthetic grids across many partition counts.</p>
+
+<h2 id="read">5. How to read the numbers</h2>
+<p>On 1/20 BAY (15,366 nodes, 50 real queries): BOA* 5.59 ms, MBOR-Basic 0.62 ms, MBOR-Adv 0.054 ms per query; MBOR-Adv is 104&times; faster than BOA*, and its 2D cost-interval pruning skips 94% of boundary-pair combinations. <b>Zero exactness mismatches</b>: the four methods return the same frontier. The paper reports MBOR-Basic 0.64 ms and a ">10&times;" headline for the same network; both are reproduced. See the <a href="./index.html">hub</a> for the full table and the <a href="https://github.com/arunshar/mbor/blob/main/docs/EVIDENCE.md">evidence file</a>.</p>
+
+<h2 id="scope">6. Honest scope</h2>
+<blockquote class="warn"><b>Rust is not faster than good C++.</b> Same compiler back end. The point of the Rust port is a memory-safe, one-command, reproducible artifact that reproduces the paper on open data, not a language speed-up.</blockquote>
+<blockquote class="warn"><b>Precompute is correct but not memory-optimized.</b> It stores the full fragment Pareto view (per boundary node, a Pareto set to every node in its fragment), which is fine for the BAY subnetworks but heavy at full-BAY scale. The reproduced figures are <i>online</i>-query numbers; the paper's published full-BAY figures are cited separately, not claimed here.</blockquote>
+<blockquote class="warn"><b>Partition.</b> The reproduced numbers use a dependency-free BFS region-growing partition. A KaHIP min-cut partition (the paper's choice) makes fewer boundary nodes and would speed MBOR further, so these numbers are conservative.</blockquote>
+
+<h2 id="next">7. What is next</h2>
+<ul>
+<li><b>Triton GPU kernels</b> for the dense, batched sub-steps (the Minkowski sum + 2D Pareto filter, and the 2D cost-interval test), benchmarked CPU vs A100. The irregular label-setting core stays on CPU, where it belongs.</li>
+<li><b>KaHIP min-cut partitions</b> and an independent cross-check against the authors' upstream C++ on the same partition.</li>
+<li>A memory-optimized precompute to reach full-BAY scale.</li>
+</ul>
+<p style="color:var(--mut);font-size:13.5px;margin-top:26px">Independent reimplementation of Yang, Zeng, Sharma, Sawamura, Northrop, Shekhar, "Towards Pareto-optimality with Multi-level Bi-objective Routing: A Summary of Results", ACM SIGSPATIAL IWCTS 2024. Upstream C++: <a href="https://github.com/yang-mingzhou/MBOR">github.com/yang-mingzhou/MBOR</a>.</p>
+
+</main></body></html>
