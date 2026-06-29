@@ -22,3 +22,4 @@ venv/
 # transient bench logs
 data/*.log
 /data/workload/
+/data/partitions/

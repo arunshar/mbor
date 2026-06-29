@@ -98,11 +98,36 @@ it is **not-validated**. This is the expected, honestly-reported outcome; the ra
 CPU precompute above is the real precompute speedup. Artifact:
 `triton/results/g5_results.json`.
 
-## Pending (in progress on MSI)
+## KaHIP min-cut partition + upstream C++ cross-check (local, no MSI)
 
-- MSI 1/5 BAY (BFS) row (precompute-bound).
-- **KaHIP min-cut partition** rows (Mac + MSI) and an **independent cross-check
-  against the authors' upstream C++** run on the same KaHIP partition.
+Using the paper's exact partitioner (`kaffpa` from Homebrew `kahip` 3.25) for a 50-way
+min-cut, all on the Mac. KaHIP yields far fewer boundary nodes than the BFS stand-in, which
+speeds both precompute and MBOR online time and raises the speedup, matching the paper's
+setup. Rust `mbor-bench`, 50 queries, min of 5 passes (rayon precompute on); every row has
+**0 exactness mismatches**.
+
+| network | partition | boundary | precompute | MBOR-Basic (ms) | MBOR-Adv (ms) | Adv vs BOA* | avg sol |
+|---|---|---|---|---|---|---|---|
+| 1/20 BAY | BFS | 1343 | 4.7 s | 0.62 | 0.054 | 104x | 15.2 |
+| 1/20 BAY | **KaHIP** | 1020 | 1.5 s | 0.276 | 0.0277 | **204x** | 15.2 |
+| 1/10 BAY | **KaHIP** | 798 | 0.12 s | 0.085 | 0.0127 | **227x** | 5.2 |
+| 1/5 BAY | **KaHIP** | 1024 | 8.4 s | 1.207 | 0.326 | **253x** | 47.4 |
+
+KaHIP edge cuts: 1/20 = 530, 1/10 = 408, 1/5 = 521. KaHIP boundary counts are close to the
+paper's Table 4 (876 / 696 / 873). The min-cut partition roughly **doubles** MBOR-Adv's
+speedup vs the BFS stand-in (104x -> 204x on 1/20 BAY) and cuts precompute time. (Entire BAY
+with a KaHIP partition is running; appended when done.)
+
+### Upstream C++ cross-check (authors' code, local)
+
+The authors' upstream C++ (github.com/yang-mingzhou/MBOR) was built locally and its
+precompute + retrieval run on 1/20 BAY with the **same KaHIP partition**. Its MBOR averaged
+**15.16 solutions/query**, matching this Rust port (15.2) and the paper (15); the upstream's
+MBOR-Basic and MBOR-Adv agree per query. (The upstream's BOA* baseline driver segfaults on
+macOS, it indexes fragment 0 with global node ids, so it is disabled in the run; BOA* is
+covered by the Rust baseline, and the authors' MBOR itself runs and agrees.) Upstream timings
+on this Mac (single-threaded precompute): MBOR-Basic 3.19 ms, MBOR-Adv 0.889 ms/query. This
+independent cross-check is fully local, no MSI.
 
 ## How to reproduce
 
