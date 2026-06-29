@@ -112,11 +112,15 @@ setup. Rust `mbor-bench`, 50 queries, min of 5 passes (rayon precompute on); eve
 | 1/20 BAY | **KaHIP** | 1020 | 1.5 s | 0.276 | 0.0277 | **204x** | 15.2 |
 | 1/10 BAY | **KaHIP** | 798 | 0.12 s | 0.085 | 0.0127 | **227x** | 5.2 |
 | 1/5 BAY | **KaHIP** | 1024 | 8.4 s | 1.207 | 0.326 | **253x** | 47.4 |
+| **Entire BAY** | **KaHIP** | 1666 | 31 min | 22.63 | 1.79 | **908x** | 118.8 |
 
-KaHIP edge cuts: 1/20 = 530, 1/10 = 408, 1/5 = 521. KaHIP boundary counts are close to the
-paper's Table 4 (876 / 696 / 873). The min-cut partition roughly **doubles** MBOR-Adv's
-speedup vs the BFS stand-in (104x -> 204x on 1/20 BAY) and cuts precompute time. (Entire BAY
-with a KaHIP partition is running; appended when done.)
+KaHIP edge cuts: 1/20 = 530, 1/10 = 408, 1/5 = 521, Entire = 843. KaHIP boundary counts are
+close to the paper's Table 4 (876 / 696 / 873 / 1322). The min-cut partition roughly **doubles**
+MBOR-Adv's speedup vs the BFS stand-in (104x -> 204x on 1/20 BAY) and cuts precompute time.
+**Entire BAY (the full 321,270-node network) is reproduced:** avg **118.8 solutions/query
+(paper: 119)**, 0 exactness mismatches, BOA* 1626 ms vs MBOR-Adv 1.79 ms = **908x**, MBOR-Basic
+22.6 ms = 71.8x; precompute ~31 min (single full-FPPV build). This is the paper's headline
+network reproduced end to end on a laptop.
 
 ### Upstream C++ cross-check (authors' code, local)
 
