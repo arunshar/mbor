@@ -1,0 +1,11 @@
+[package]
+name = "mbor-baseline"
+description = "Exact compute-on-demand bi-objective baselines for the MBOR speedup comparison: BOA* and bi-objective Dijkstra (BOD)"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+mbor-core = { path = "../mbor-core" }

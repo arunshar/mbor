@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/mbor-core", "crates/mbor-precompute"]
+members = [
+    "crates/mbor-core",
+    "crates/mbor-precompute",
+    "crates/mbor-baseline",
+    "crates/mbor-bench",
+]
 
 [workspace.package]
 edition = "2021"

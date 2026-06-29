@@ -125,3 +125,46 @@ fn single_fragment_has_no_boundary() {
     // Still answers correctly via the within-fragment direct path.
     assert_eq!(mepfv.query(0, 24), pareto_costs(&g, 0, 24));
 }
+
+fn assert_adv_parity(g: &Graph, k: usize) {
+    let mepfv = Mepfv::build_contiguous(g, k);
+    let n = g.num_nodes();
+    for o in 0..n {
+        for d in 0..n {
+            let basic = mepfv.query(o, d);
+            let (adv, _) = mepfv.query_adv(o, d);
+            let exact = pareto_costs(g, o, d);
+            assert_eq!(adv, basic, "adv != basic o={o} d={d} k={k}");
+            assert_eq!(adv, exact, "adv != exact o={o} d={d} k={k}");
+        }
+    }
+}
+
+#[test]
+fn adv_matches_basic_and_exact() {
+    let toy = Graph::from_dimacs_str(TOY).unwrap();
+    for k in [2, 3, 5, 8] {
+        assert_adv_parity(&toy, k);
+    }
+    let g = grid(6, 6);
+    for k in [3, 5, 9] {
+        assert_adv_parity(&g, k);
+    }
+}
+
+#[test]
+fn adv_actually_prunes() {
+    // On a larger grid with many boundary pairs, 2DCI pruning must skip some.
+    let g = grid(7, 7); // 49 nodes
+    let mepfv = Mepfv::build_contiguous(&g, 9);
+    let (mut pruned, mut total) = (0usize, 0usize);
+    for o in 0..49 {
+        for d in 0..49 {
+            let (_, s) = mepfv.query_adv(o, d);
+            pruned += s.pairs_pruned;
+            total += s.pairs_total;
+        }
+    }
+    assert!(total > 0);
+    assert!(pruned > 0, "expected 2DCI pruning, got {pruned}/{total}");
+}

@@ -1,0 +1,18 @@
+### BAY10 (1/10 BAY)
+== MBOR speedup benchmark ==
+map=/Users/arunsharma/code/mbor/data/maps/BAY10-road-d.txt  nodes=32205  edges=76230  partition=bfs(k=50)  boundary_nodes=1235
+precompute_time = 7292.9 ms
+queries=50  avg_pareto_solutions=5.2  exactness_mismatches=0
+--- avg per-query online time (ms), min of 3 passes ---
+  BOD (bi-objective Dijkstra) : 7.8649
+  BOA*                        : 2.8452
+  MBOR-Basic                  : 0.3836
+  MBOR-Adv                    : 0.0395
+--- speedup (online) ---
+  MBOR-Basic vs BOA* : 7.4x
+  MBOR-Adv   vs BOA* : 72.1x
+  MBOR-Adv   vs BOD  : 199.2x
+  MBOR-Adv   vs MBOR-Basic : 9.72x
+Adv 2DCI pruning: 42212/42711 boundary-pair combinations pruned (99%)
+
+### BAY5 (1/5 BAY)

@@ -19,11 +19,11 @@
 //! Correctness is checked against `mbor_core`'s exact full-graph search.
 
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 
 use mbor_core::graph::{Cost, Graph};
 use mbor_core::label_setting::pareto_from;
-use mbor_core::pareto::{minkowski_sum, pareto_filter};
+use mbor_core::pareto::{insert_nondominated, minkowski_sum, pareto_filter};
 
 /// Contiguous block partition: node `i` goes to fragment `(i * k) / n`.
 /// Deterministic and trivial to reproduce in any language (used as a stand-in
@@ -31,6 +31,48 @@ use mbor_core::pareto::{minkowski_sum, pareto_filter};
 pub fn contiguous_partition(n: usize, k: usize) -> Vec<u32> {
     assert!(k >= 1 && k <= n.max(1));
     (0..n).map(|i| ((i * k) / n) as u32).collect()
+}
+
+/// Multi-source BFS (Voronoi) region-growing partition: `k` seeds spread across
+/// the node-id range grow outward simultaneously, each node joining the seed
+/// that reaches it first. Produces compact, connected fragments with far fewer
+/// boundary nodes than a contiguous split (a dependency-free stand-in for KaHIP
+/// min-cut). Deterministic. MBOR is exact, so the partition affects only speed.
+pub fn bfs_partition(graph: &Graph, k: usize) -> Vec<u32> {
+    let n = graph.num_nodes();
+    assert!(k >= 1 && k <= n.max(1));
+    // Undirected adjacency for region growing.
+    let mut adj: Vec<Vec<u32>> = vec![Vec::new(); n];
+    for u in 0..n {
+        for (v, _) in graph.neighbors(u) {
+            adj[u].push(v as u32);
+            adj[v].push(u as u32);
+        }
+    }
+    let mut part = vec![u32::MAX; n];
+    let mut q: VecDeque<u32> = VecDeque::new();
+    for fid in 0..k {
+        let s = (fid * n) / k;
+        if part[s] == u32::MAX {
+            part[s] = fid as u32;
+            q.push_back(s as u32);
+        }
+    }
+    while let Some(u) = q.pop_front() {
+        let f = part[u as usize];
+        for &v in &adj[u as usize] {
+            if part[v as usize] == u32::MAX {
+                part[v as usize] = f;
+                q.push_back(v);
+            }
+        }
+    }
+    for p in part.iter_mut() {
+        if *p == u32::MAX {
+            *p = 0; // isolated nodes -> fragment 0
+        }
+    }
+    part
 }
 
 /// Pareto label-setting over a boundary multigraph: `adj[u]` lists
@@ -236,4 +278,109 @@ impl Mepfv {
 
         pareto_filter(candidates)
     }
+
+    /// Online retrieval (Algorithm 4, Adv): the SAME exact frontier as `query`,
+    /// but with two-dimensional cost-interval pruning. For each boundary-node
+    /// pair the route's ideal lower-left corner `(min c1, min c2)` is the best
+    /// any of its paths can do; if that corner is already dominated by the
+    /// frontier found so far, every path through the pair is dominated, so its
+    /// Minkowski combination is skipped. Pairs are processed ideal-corner-first
+    /// so the frontier tightens early. Returns the frontier plus pruning stats.
+    pub fn query_adv(&self, o: usize, d: usize) -> (Vec<Cost>, AdvStats) {
+        assert!(o < self.n && d < self.n);
+        let mut stats = AdvStats::default();
+        if o == d {
+            return (vec![Cost::ZERO], stats);
+        }
+        let fo = self.part[o] as usize;
+        let fd = self.part[d] as usize;
+        let ol = self.frag_g2l[fo][o] as usize;
+        let dl = self.frag_g2l[fd][d] as usize;
+
+        // Seed the frontier with within-fragment direct paths.
+        let mut front: Vec<Cost> = Vec::new();
+        if fo == fd {
+            let direct = pareto_from(&self.frag_graph[fo], ol);
+            for &c in &direct[dl] {
+                insert_nondominated(&mut front, c);
+            }
+        }
+
+        // Candidate (oBN, dBN) pairs: segment frontiers + ideal corner.
+        struct Pair<'a> {
+            a: &'a [Cost],
+            b: &'a [Cost],
+            c: &'a [Cost],
+            c1min: i64,
+            c2min: i64,
+        }
+        let mut pairs: Vec<Pair> = Vec::new();
+        for &obn in &self.frag_boundary[fo] {
+            let a = &self.node2b[fo][&obn][ol];
+            if a.is_empty() {
+                continue;
+            }
+            let si = self.bidx[obn as usize] as usize;
+            for &dbn in &self.frag_boundary[fd] {
+                let c = &self.b2node[fd][&dbn][dl];
+                if c.is_empty() {
+                    continue;
+                }
+                let ti = self.bidx[dbn as usize] as usize;
+                let b = &self.bppv[si][ti];
+                if b.is_empty() {
+                    continue;
+                }
+                // a, b, c are sorted by c1 asc / c2 desc: [0] = min c1, last = min c2.
+                let c1min = a[0].c1 + b[0].c1 + c[0].c1;
+                let c2min = a[a.len() - 1].c2 + b[b.len() - 1].c2 + c[c.len() - 1].c2;
+                pairs.push(Pair {
+                    a,
+                    b,
+                    c,
+                    c1min,
+                    c2min,
+                });
+            }
+        }
+        stats.pairs_total = pairs.len();
+        pairs.sort_by(|x, y| x.c1min.cmp(&y.c1min).then(x.c2min.cmp(&y.c2min)));
+
+        for p in &pairs {
+            if front.iter().any(|f| f.c1 <= p.c1min && f.c2 <= p.c2min) {
+                stats.pairs_pruned += 1;
+                continue;
+            }
+            let ab = minkowski_sum(p.a, p.b);
+            let abc = minkowski_sum(&ab, p.c);
+            stats.combinations += 1;
+            for c in abc {
+                insert_nondominated(&mut front, c);
+            }
+        }
+
+        (pareto_filter(front), stats)
+    }
+
+    /// Just the Adv frontier (for parity checks).
+    pub fn query_adv_costs(&self, o: usize, d: usize) -> Vec<Cost> {
+        self.query_adv(o, d).0
+    }
+}
+
+/// Pruning statistics from `Mepfv::query_adv`.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AdvStats {
+    pub pairs_total: usize,
+    pub pairs_pruned: usize,
+    pub combinations: usize,
+}
+
+/// Load a partition file (one fragment id per line in node order 0..n-1), e.g.
+/// a KaHIP `kaffpaIndex.txt` or the synthesized stand-in.
+pub fn load_partition(path: &str) -> Result<Vec<u32>, String> {
+    let s = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    s.split_whitespace()
+        .map(|t| t.parse::<u32>().map_err(|e| e.to_string()))
+        .collect()
 }

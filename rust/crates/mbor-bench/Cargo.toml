@@ -1,0 +1,17 @@
+[package]
+name = "mbor-bench"
+description = "Speedup benchmark: MBOR-Basic / MBOR-Adv (precomputed) vs BOA* / BOD (compute-on-demand) on the BAY subnets"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+mbor-core = { path = "../mbor-core" }
+mbor-precompute = { path = "../mbor-precompute" }
+mbor-baseline = { path = "../mbor-baseline" }
+
+[[bin]]
+name = "mbor-bench"
+path = "src/main.rs"
