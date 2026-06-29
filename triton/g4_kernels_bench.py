@@ -52,14 +52,19 @@ def np_ideal_corner(a, b, c):
                      a[:, 1].min() + b[:, 1].min() + c[:, 1].min()], dtype=a.dtype)
 
 # ---------------------------------------------------------------------------
-# Triton kernels
+# Triton kernels (defined at MODULE level so `tl` is in the kernels' globals,
+# which Triton's AST compiler requires).
 # ---------------------------------------------------------------------------
-def build_kernels():
-    try:
-        import torch, triton
-        import triton.language as tl
-    except Exception as e:
-        return None, f"triton/torch import failed: {e}"
+try:
+    import triton
+    import triton.language as tl
+    _HAVE_TRITON = True
+    _TRITON_ERR = ""
+except Exception as _e:  # triton not installed
+    _HAVE_TRITON = False
+    _TRITON_ERR = str(_e)
+
+if _HAVE_TRITON:
 
     @triton.jit
     def _outer_sum(a_ptr, b_ptr, out_ptr, A: tl.constexpr, B: tl.constexpr):
@@ -106,6 +111,14 @@ def build_kernels():
         tl.store(out_ptr + row * 2 + 0, m1)
         tl.store(out_ptr + row * 2 + 1, m2)
 
+
+def build_kernels():
+    if not _HAVE_TRITON:
+        return None, f"triton import failed: {_TRITON_ERR}"
+    try:
+        import torch  # noqa: F401
+    except Exception as e:
+        return None, f"torch import failed: {e}"
     return {"outer_sum": _outer_sum, "pareto_scan": _pareto_scan, "dci_corner": _dci_corner}, None
 
 
@@ -133,6 +146,7 @@ def pad_sets(sets, dtype):
     P = len(sets)
     M = max((len(s) for s in sets), default=1)
     M = max(M, 1)
+    M = 1 << (M - 1).bit_length()  # next power of 2 (Triton tl.arange constraint)
     arr = np.zeros((P, M, 2), dtype=dtype)
     lens = np.zeros(P, dtype=np.int64)
     for i, s in enumerate(sets):

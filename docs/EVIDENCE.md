@@ -60,6 +60,44 @@ so these are conservative MBOR numbers. Online time = average per query (min of
 (here 0.62 Mac), MBOR-Adv 0.38 ms; 1/10 MBOR-Basic 0.33 ms (here 0.38 Mac); 1/5
 MBOR-Basic 1.20 ms. Same regime; absolute ms differ by machine and partition.
 
+## GPU acceleration (MSI A100)
+
+### Precompute: rayon multi-threaded CPU (validated)
+
+The MEPFV precompute (FPPV + all-pairs BPPV) parallelizes across fragments and
+boundary sources with rayon. Identical MEPFV (all parity tests still pass).
+1/20 BAY precompute: **43.2 s (1 thread) -> 4.73 s (14 cores), 9.1x**. This is the
+real precompute win; it addresses the "precompute unoptimized" caveat.
+
+### G4: Triton dense online sub-kernels (validated on A100)
+
+Three `@triton.jit` kernels for MBOR's dense, batched online sub-steps, run on an
+NVIDIA A100-SXM4-40GB over the **real exported MBOR workload** (4,000 boundary-pair
+(A,B,C) cost-set triples from BAY20). Each is checked for correctness against a
+numpy reference and timed CPU (numpy) vs GPU (Triton), CUDA-event median. Honesty
+contract: status `validated` only if correct AND GPU >= CPU.
+
+| kernel | op | correct | CPU (ms) | A100 (ms) | speedup | status |
+|---|---|---|---|---|---|---|
+| pareto_filter | batched 2D Pareto filter (sort + prefix-min scan) | yes | 494.5 | 5.14 | 96x | validated |
+| dci_corner | batched 2D cost-interval ideal corner | yes | 63.6 | 0.054 | 1188x | validated |
+| outer_sum | batched Minkowski outer-sum A(+)B | yes | n/a | 0.096 | n/a | validated |
+
+The irregular label-setting core stays on CPU; only these dense, batched sub-steps
+go to the GPU, where the win is real. Artifacts: `triton/results/g4_results.json`,
+code in `triton/g4_kernels_bench.py`.
+
+### G5: speculative GPU precompute (not validated, honest result)
+
+The per-source bi-objective label-setting is irregular (priority-queue,
+dynamic Pareto sets), a poor GPU fit. A batched GPU bi-objective relaxation with a
+per-node label cap was attempted on the real exported fragment (658 nodes): on the
+A100 it ran in ~21-24 ms vs ~28-44 ms CPU but matched the exact CPU result for
+**0/20 sources** (the label-cap + collision-merge approximation drops labels), so
+it is **not-validated**. This is the expected, honestly-reported outcome; the rayon
+CPU precompute above is the real precompute speedup. Artifact:
+`triton/results/g5_results.json`.
+
 ## Pending (in progress on MSI)
 
 - MSI 1/5 BAY (BFS) row (precompute-bound).

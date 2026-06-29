@@ -104,8 +104,9 @@ footer{padding:26px 0 50px;color:var(--mut);font-size:13.5px;text-align:center}
       <tr><td>MEPFV precompute: FPPV, boundary multigraph, BPPV (Alg 1/5)</td><td><span class="ok">Real</span>, parity-checked vs exact full-graph search</td></tr>
       <tr><td>Online retrieval Basic (Alg 3) + Adv 2DCI pruning (Alg 4)</td><td><span class="ok">Real</span>, reproduces paper speedup; 0 exactness mismatches</td></tr>
       <tr><td>Baselines: BOA*, bi-objective Dijkstra</td><td><span class="ok">Real</span>, exact, agree on all pairs</td></tr>
-      <tr><td>Precompute memory at full-BAY scale</td><td><span class="scaf">Not yet optimized</span> (stores full FPPV)</td></tr>
-      <tr><td>Triton GPU kernels (Minkowski + 2DCI), CPU-vs-A100</td><td><span class="scaf">Next</span> (MSI)</td></tr>
+      <tr><td>Precompute speed (rayon multi-threaded)</td><td><span class="ok">Real</span>, 9.1&times; on 1/20 BAY (43.2 s &rarr; 4.73 s, 14 cores); full-FPPV memory still heavy at full-BAY scale</td></tr>
+      <tr><td>Triton GPU kernels (Pareto-filter, 2DCI, Minkowski), CPU-vs-A100</td><td><span class="ok">Validated on A100</span> (batched Pareto-filter 96&times;, 2DCI 1188&times;; see <a href="https://github.com/arunshar/mbor/blob/main/docs/EVIDENCE.md">EVIDENCE</a>)</td></tr>
+      <tr><td>Speculative GPU per-source precompute</td><td><span class="scaf">Not validated</span> (irregular workload; honest result in EVIDENCE)</td></tr>
       <tr><td>KaHIP min-cut partition + upstream C++ cross-check</td><td><span class="scaf">In progress</span> (MSI)</td></tr>
     </tbody>
   </table>

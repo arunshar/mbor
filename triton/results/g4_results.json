@@ -1,0 +1,29 @@
+{
+  "workload": {
+    "triples": 4000
+  },
+  "kernels": {
+    "pareto_filter": {
+      "correct": true,
+      "cpu_ms": 494.485,
+      "gpu_ms": 5.141,
+      "speedup": 96.18,
+      "status": "validated"
+    },
+    "dci_corner": {
+      "correct": true,
+      "cpu_ms": 63.632,
+      "gpu_ms": 0.054,
+      "speedup": 1187.87,
+      "status": "validated"
+    },
+    "outer_sum": {
+      "correct": true,
+      "gpu_ms": 0.096,
+      "status": "validated",
+      "note": "dense batched Minkowski outer-sum; correctness checked on a sample"
+    }
+  },
+  "device": "NVIDIA A100-SXM4-40GB",
+  "status": "ok"
+}

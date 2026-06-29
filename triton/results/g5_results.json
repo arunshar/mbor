@@ -1,0 +1,15 @@
+{
+  "fragment": {
+    "n": 658,
+    "edges": 1860,
+    "sources": 20
+  },
+  "cap": 16,
+  "cpu_ms": 32.706,
+  "device": "NVIDIA A100-SXM4-40GB",
+  "gpu_ms": 31.435,
+  "sources_exactly_matched": "0/20",
+  "speedup_cpu_over_gpu": 1.04,
+  "status": "not-validated",
+  "verdict": "GPU bi-objective precompute did not beat CPU on this irregular fragment (expected: the per-source label-setting is a poor GPU fit). The rayon multi-threaded CPU precompute is the real precompute win (see EVIDENCE.md)."
+}
