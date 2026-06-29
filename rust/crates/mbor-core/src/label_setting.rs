@@ -136,3 +136,43 @@ pub fn pareto_costs(graph: &Graph, source: usize, dest: usize) -> Vec<Cost> {
         .map(|p| p.cost)
         .collect()
 }
+
+/// One-to-all label-setting: the Pareto frontier of costs from `source` to
+/// EVERY node. `result[v]` is the set of Pareto-optimal `(c1, c2)` costs from
+/// source to `v`, sorted by `c1` (so `c2` strictly decreases); empty if `v` is
+/// unreachable, and `[(0,0)]` for the source itself. This is the building block
+/// for the fragment Pareto path views (FPPV) in precomputation.
+pub fn pareto_from(graph: &Graph, source: usize) -> Vec<Vec<Cost>> {
+    let n = graph.num_nodes();
+    let mut g2_min = vec![i64::MAX; n];
+    let mut out: Vec<Vec<Cost>> = vec![Vec::new(); n];
+    let mut heap: BinaryHeap<HeapItem> = BinaryHeap::new();
+    // Here `label` carries the node id directly (no path reconstruction).
+    heap.push(HeapItem {
+        c1: 0,
+        c2: 0,
+        label: source as u32,
+    });
+
+    while let Some(item) = heap.pop() {
+        let u = item.label as usize;
+        let c = Cost::new(item.c1, item.c2);
+        if c.c2 >= g2_min[u] {
+            continue;
+        }
+        g2_min[u] = c.c2;
+        out[u].push(c);
+        for (v, w) in graph.neighbors(u) {
+            let nc = c + w;
+            if nc.c2 >= g2_min[v] {
+                continue;
+            }
+            heap.push(HeapItem {
+                c1: nc.c1,
+                c2: nc.c2,
+                label: v as u32,
+            });
+        }
+    }
+    out
+}

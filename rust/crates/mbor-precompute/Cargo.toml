@@ -1,0 +1,11 @@
+[package]
+name = "mbor-precompute"
+description = "MBOR precomputation: graph partition, fragment Pareto views (FPPV), boundary multigraph, and the boundary Pareto view (BPPV) forming the MEPFV"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+mbor-core = { path = "../mbor-core" }

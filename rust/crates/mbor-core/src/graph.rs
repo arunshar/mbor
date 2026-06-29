@@ -146,4 +146,39 @@ impl Graph {
         let s = fs::read_to_string(path).map_err(|e| e.to_string())?;
         Graph::from_dimacs_str(&s)
     }
+
+    /// The edge-reversed graph (every `u -> v` becomes `v -> u`, same cost).
+    /// Used to compute node-to-boundary Pareto sets as boundary-to-node searches
+    /// on the reverse graph.
+    pub fn reversed(&self) -> Graph {
+        let mut edges = Vec::with_capacity(self.num_edges());
+        for u in 0..self.n {
+            for (v, c) in self.neighbors(u) {
+                edges.push((v as u32, u as u32, c));
+            }
+        }
+        Graph::from_edges(self.n, edges)
+    }
+
+    /// Build an induced subgraph over `nodes` (global ids). Returns the subgraph
+    /// with nodes remapped to `0..nodes.len()` in the given order, plus the
+    /// `global -> local` map (`u32::MAX` for nodes not in the subgraph). Only
+    /// edges with both endpoints in `nodes` are kept.
+    pub fn induced_subgraph(&self, nodes: &[u32]) -> (Graph, Vec<u32>) {
+        let mut g2l = vec![u32::MAX; self.n];
+        for (local, &g) in nodes.iter().enumerate() {
+            g2l[g as usize] = local as u32;
+        }
+        let mut edges = Vec::new();
+        for &g in nodes {
+            let lu = g2l[g as usize];
+            for (v, c) in self.neighbors(g as usize) {
+                let lv = g2l[v];
+                if lv != u32::MAX {
+                    edges.push((lu, lv, c));
+                }
+            }
+        }
+        (Graph::from_edges(nodes.len(), edges), g2l)
+    }
 }

@@ -14,5 +14,5 @@ pub mod label_setting;
 pub mod pareto;
 
 pub use graph::{Cost, Graph};
-pub use label_setting::{pareto_costs, pareto_search, ParetoPath};
+pub use label_setting::{pareto_costs, pareto_from, pareto_search, ParetoPath};
 pub use pareto::{insert_nondominated, minkowski_sum, pareto_filter};
