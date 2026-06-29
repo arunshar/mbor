@@ -9,3 +9,4 @@ repository.workspace = true
 
 [dependencies]
 mbor-core = { path = "../mbor-core" }
+rayon = "1"

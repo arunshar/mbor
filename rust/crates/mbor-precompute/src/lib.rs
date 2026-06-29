@@ -24,6 +24,7 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use mbor_core::graph::{Cost, Graph};
 use mbor_core::label_setting::pareto_from;
 use mbor_core::pareto::{insert_nondominated, minkowski_sum, pareto_filter};
+use rayon::prelude::*;
 
 /// Contiguous block partition: node `i` goes to fragment `(i * k) / n`.
 /// Deterministic and trivial to reproduce in any language (used as a stand-in
@@ -155,23 +156,39 @@ impl Mepfv {
             frag_boundary[part[g as usize] as usize].push(g);
         }
 
-        // Per-fragment induced subgraphs + FPPV (forward and reverse).
+        // Per-fragment induced subgraphs + FPPV (forward and reverse). Fragments
+        // are independent, so the FPPV encode runs in parallel across fragments
+        // (rayon); set RAYON_NUM_THREADS=1 for the single-threaded baseline.
+        type FppvPart = (
+            Vec<u32>,
+            Graph,
+            HashMap<u32, Vec<Vec<Cost>>>,
+            HashMap<u32, Vec<Vec<Cost>>>,
+        );
+        let frag_results: Vec<FppvPart> = (0..k)
+            .into_par_iter()
+            .map(|f| {
+                let (gf, g2l) = graph.induced_subgraph(&frag_nodes[f]);
+                let gf_rev = gf.reversed();
+                let mut b2: HashMap<u32, Vec<Vec<Cost>>> = HashMap::new();
+                let mut n2: HashMap<u32, Vec<Vec<Cost>>> = HashMap::new();
+                for &b in &frag_boundary[f] {
+                    let bl = g2l[b as usize] as usize;
+                    b2.insert(b, pareto_from(&gf, bl)); // boundary -> node
+                    n2.insert(b, pareto_from(&gf_rev, bl)); // node -> boundary
+                }
+                (g2l, gf, b2, n2)
+            })
+            .collect();
         let mut frag_g2l: Vec<Vec<u32>> = Vec::with_capacity(k);
         let mut frag_graph: Vec<Graph> = Vec::with_capacity(k);
-        let mut b2node: Vec<HashMap<u32, Vec<Vec<Cost>>>> = vec![HashMap::new(); k];
-        let mut node2b: Vec<HashMap<u32, Vec<Vec<Cost>>>> = vec![HashMap::new(); k];
-
-        for f in 0..k {
-            let (gf, g2l) = graph.induced_subgraph(&frag_nodes[f]);
-            let gf_rev = gf.reversed();
-            for &b in &frag_boundary[f] {
-                let bl = g2l[b as usize] as usize;
-                // boundary -> node (forward) and node -> boundary (reverse).
-                b2node[f].insert(b, pareto_from(&gf, bl));
-                node2b[f].insert(b, pareto_from(&gf_rev, bl));
-            }
+        let mut b2node: Vec<HashMap<u32, Vec<Vec<Cost>>>> = Vec::with_capacity(k);
+        let mut node2b: Vec<HashMap<u32, Vec<Vec<Cost>>>> = Vec::with_capacity(k);
+        for (g2l, gf, b2, n2) in frag_results {
             frag_g2l.push(g2l);
             frag_graph.push(gf);
+            b2node.push(b2);
+            node2b.push(n2);
         }
 
         // Boundary multigraph adjacency over boundary indices.
@@ -203,11 +220,13 @@ impl Mepfv {
             }
         }
 
-        // BPPV: all-pairs Pareto over the boundary multigraph.
-        let mut bppv: Vec<Vec<Vec<Cost>>> = Vec::with_capacity(nb);
-        for s in 0..nb {
-            bppv.push(multigraph_pareto_from(&adj, s));
-        }
+        // BPPV: all-pairs Pareto over the boundary multigraph. Each source is
+        // independent -> parallelized across boundary nodes (the heaviest part
+        // of precompute when there are many boundary nodes).
+        let bppv: Vec<Vec<Vec<Cost>>> = (0..nb)
+            .into_par_iter()
+            .map(|s| multigraph_pareto_from(&adj, s))
+            .collect();
 
         Mepfv {
             n,
