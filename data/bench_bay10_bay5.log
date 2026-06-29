@@ -16,3 +16,19 @@ queries=50  avg_pareto_solutions=5.2  exactness_mismatches=0
 Adv 2DCI pruning: 42212/42711 boundary-pair combinations pruned (99%)
 
 ### BAY5 (1/5 BAY)
+== MBOR speedup benchmark ==
+map=/Users/arunsharma/code/mbor/data/maps/BAY5-road-d.txt  nodes=64684  edges=156682  partition=bfs(k=50)  boundary_nodes=2061
+precompute_time = 1357108.3 ms
+queries=50  avg_pareto_solutions=47.4  exactness_mismatches=0
+--- avg per-query online time (ms), min of 3 passes ---
+  BOD (bi-objective Dijkstra) : 219.8099
+  BOA*                        : 81.7046
+  MBOR-Basic                  : 10.4184
+  MBOR-Adv                    : 1.8718
+--- speedup (online) ---
+  MBOR-Basic vs BOA* : 7.8x
+  MBOR-Adv   vs BOA* : 43.7x
+  MBOR-Adv   vs BOD  : 117.4x
+  MBOR-Adv   vs MBOR-Basic : 5.57x
+Adv 2DCI pruning: 99706/118946 boundary-pair combinations pruned (84%)
+### DONE
