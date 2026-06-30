@@ -1,68 +1,15 @@
-<svg viewBox="0 0 960 330" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="MBOR architecture: MEPFV precomputation and online retrieval">
-  <style>
-    .t{font-family:Montserrat,system-ui,sans-serif;font-size:13px;font-weight:700;fill:#16202c}
-    .s{font-family:'Noto Sans',system-ui,sans-serif;font-size:10.5px;fill:#5b6776}
-    .box{fill:#ffffff;stroke:#d8dee8;stroke-width:1.5;rx:10}
-    .green{fill:#eafaf2;stroke:#0e9f6e}
-    .amber{fill:#fdf3e6;stroke:#b45309}
-    .blue{fill:#eaf0fd;stroke:#2257d6}
-    .lab{font-family:Montserrat;font-size:11px;font-weight:700;fill:#0e9f6e}
-    .laba{font-family:Montserrat;font-size:11px;font-weight:700;fill:#b45309}
-    .ar{stroke:#8893a4;stroke-width:1.7;fill:none;marker-end:url(#a)}
-    .ph{font-family:Montserrat;font-size:11.5px;font-weight:800;fill:#16202c;letter-spacing:.04em}
-  </style>
-  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8893a4"/></marker></defs>
-
-  <text class="ph" x="20" y="22">PRECOMPUTE  (MEPFV)</text>
-  <text class="ph" x="640" y="22">ONLINE  (per query)</text>
-
-  <!-- precompute row -->
-  <rect class="box" x="14"  y="42" width="150" height="58" rx="10"/>
-  <text class="t" x="26" y="64">Road network</text><text class="s" x="26" y="80">G = (N, E, c)</text><text class="s" x="26" y="93">two costs / edge</text>
-
-  <rect class="box" x="190" y="42" width="160" height="58" rx="10"/>
-  <text class="t" x="202" y="64">Partition</text><text class="s" x="202" y="80">fragments (BFS / KaHIP)</text><text class="s" x="202" y="93">-&gt; boundary nodes</text>
-
-  <rect class="box green" x="376" y="42" width="160" height="58" rx="10"/>
-  <text class="t" x="388" y="64">FPPV</text><text class="s" x="388" y="80">node&#8596;boundary Pareto</text><text class="lab" x="388" y="94">reproduced</text>
-
-  <rect class="box green" x="562" y="42" width="170" height="58" rx="10"/>
-  <text class="t" x="574" y="62">Boundary multigraph</text><text class="s" x="574" y="78">local multi-edges +</text><text class="s" x="574" y="91">boundary edges</text>
-
-  <rect class="box green" x="758" y="42" width="188" height="58" rx="10"/>
-  <text class="t" x="770" y="64">BPPV</text><text class="s" x="770" y="80">all-pairs boundary Pareto</text><text class="lab" x="770" y="94">reproduced (exact)</text>
-
-  <path class="ar" d="M164,71 L188,71"/>
-  <path class="ar" d="M350,71 L374,71"/>
-  <path class="ar" d="M536,71 L560,71"/>
-  <path class="ar" d="M732,71 L756,71"/>
-
-  <!-- MEPFV bracket -->
-  <path d="M376,108 L946,108" stroke="#0e9f6e" stroke-width="1.2" stroke-dasharray="4 4" fill="none"/>
-  <text class="lab" x="610" y="124">MEPFV (precomputed once)</text>
-
-  <!-- online row -->
-  <rect class="box" x="14" y="168" width="150" height="58" rx="10"/>
-  <text class="t" x="26" y="190">Query (o, d)</text><text class="s" x="26" y="206">origin, destination</text>
-
-  <rect class="box blue" x="190" y="168" width="200" height="58" rx="10"/>
-  <text class="t" x="202" y="188">MBOR-Basic (Alg 3)</text><text class="s" x="202" y="204">FPPV &#8853; BPPV &#8853; FPPV</text><text class="s" x="202" y="217">Minkowski combine</text>
-
-  <rect class="box blue" x="416" y="168" width="210" height="58" rx="10"/>
-  <text class="t" x="428" y="188">MBOR-Adv (Alg 4)</text><text class="s" x="428" y="204">2D cost-interval pruning</text><text class="s" x="428" y="217">skip dominated pairs</text>
-
-  <rect class="box green" x="652" y="168" width="170" height="58" rx="10"/>
-  <text class="t" x="664" y="190">Pareto frontier</text><text class="s" x="664" y="206">complete &amp; exact</text><text class="lab" x="664" y="219">= BOA* = BOD</text>
-
-  <path class="ar" d="M164,197 L188,197"/>
-  <path class="ar" d="M390,197 L414,197"/>
-  <path class="ar" d="M626,197 L650,197"/>
-  <!-- MEPFV feeds online -->
-  <path class="ar" d="M460,140 L300,166" stroke-dasharray="3 3"/>
-  <path class="ar" d="M620,140 L520,166" stroke-dasharray="3 3"/>
-
-  <!-- footnote -->
-  <text class="laba" x="14" y="262">Honest scope:</text>
-  <text class="s" x="120" y="262">online retrieval reproduces the paper's &gt;10x speedup on open DIMACS Bay Area data; precompute is correct but not yet memory-optimized for full BAY.</text>
-  <text class="s" x="14" y="284">Green = reproduced and exactness-checked against BOA* / bi-objective Dijkstra and an independent full-graph search. Blue = the two online retrieval modes.</text>
-</svg>
+<svg viewBox="0 0 1120 426" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MBOR architecture"><defs>
+<marker id="ah" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto"><path d="M0,0 L11,5 L0,10 z" fill="#202733"/></marker>
+</defs>
+<style>
+svg text{font-family:'Noto Sans',system-ui,-apple-system,sans-serif;}
+.box{fill:#fff;stroke:#aebbd0;stroke-width:1.5;}
+.acc{fill:#eaf3fd;stroke:#1772d0;stroke-width:1.5;}
+.grn{fill:#e6f7ed;stroke:#0f766e;stroke-width:1.5;}
+.amb{fill:#fff6e6;stroke:#e7b66a;stroke-width:1.5;stroke-dasharray:6 4;}
+.lane{fill:#f3f6fc;stroke:#aebbd0;stroke-width:1.5;}
+.ttl{font-size:16px;font-weight:700;fill:#0e1117;font-family:'Montserrat','Noto Sans',sans-serif;}
+.sub{font-size:12.5px;font-weight:500;fill:#1b2230;}
+.ar{stroke:#202733;stroke-width:2.2;fill:none;marker-end:url(#ah);}
+.lg{font-size:12px;}
+</style><rect class="box" x="28" y="52" width="177.6" height="92" rx="11"/><text class="ttl" x="117" y="94" text-anchor="middle">Road network</text><text class="sub" x="117" y="112" text-anchor="middle">DIMACS Bay Area, 321,270 nodes</text><rect class="box" x="249.6" y="52" width="177.6" height="92" rx="11"/><text class="ttl" x="338" y="94" text-anchor="middle">KaHIP min-cut partition</text><text class="sub" x="338" y="112" text-anchor="middle">50 fragments</text><rect class="acc" x="471.2" y="52" width="177.6" height="92" rx="11"/><text class="ttl" x="560" y="94" text-anchor="middle">Boundary multigraph</text><text class="sub" x="560" y="112" text-anchor="middle">inter-fragment links</text><rect class="acc" x="692.8" y="52" width="177.6" height="92" rx="11"/><text class="ttl" x="782" y="94" text-anchor="middle">MEPFV precompute</text><text class="sub" x="782" y="112" text-anchor="middle">FPPV + BPPV (rayon)</text><rect class="box" x="914.4" y="52" width="177.6" height="92" rx="11"/><text class="ttl" x="1003" y="94" text-anchor="middle">Online retrieval</text><text class="sub" x="1003" y="112" text-anchor="middle">per query</text><line class="ar" x1="205.6" y1="98.0" x2="249.6" y2="98.0"/><line class="ar" x1="427.2" y1="98.0" x2="471.2" y2="98.0"/><line class="ar" x1="648.8" y1="98.0" x2="692.8" y2="98.0"/><line class="ar" x1="870.4" y1="98.0" x2="914.4" y2="98.0"/><rect class="box" x="28" y="196" width="340.0" height="80" rx="11"/><text class="ttl" x="198" y="232" text-anchor="middle">Basic (Alg 3)</text><text class="sub" x="198" y="250" text-anchor="middle">frontier merge</text><rect class="grn" x="390.0" y="196" width="340.0" height="80" rx="11"/><text class="ttl" x="560" y="232" text-anchor="middle">Adv 2DCI (Alg 4)</text><text class="sub" x="560" y="250" text-anchor="middle">cost-interval pruning</text><rect class="grn" x="752.0" y="196" width="340.0" height="80" rx="11"/><text class="ttl" x="922" y="232" text-anchor="middle">Complete Pareto set</text><text class="sub" x="922" y="250" text-anchor="middle">time vs energy routes</text><line class="ar" x1="1003.1999999999999" y1="144" x2="1003.1999999999999" y2="196"/><rect x="28" y="300" width="1064" height="84" rx="12" fill="#fff6e6" stroke="#e7b66a" stroke-width="1.5"/><text x="48" y="328" style="font-size:15px;font-weight:700;fill:#0e1117;font-family:Montserrat,sans-serif">Reproduced (Rust + Triton)</text><text x="48" y="350" class="sub">Full BAY (321,270 nodes): MBOR-Adv ~900x over exact bi-objective A*, exact Pareto sets (0 mismatches vs 3 baselines).</text><text x="48" y="370" class="sub">Dense GPU sub-steps reach 96x and 1188x in Triton on an A100; avg 118.8 solutions/query (paper: 119).</text><text class="lg" x="28" y="408" fill="#0f766e">green = real and tested</text><text class="lg" x="228" y="408" fill="#b45309">dashed amber = off-the-shelf / target</text><text class="lg" x="498" y="408" fill="#1772d0">blue = learned / core method</text></svg>
